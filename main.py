@@ -41,7 +41,7 @@ async def speech_to_text(audio: bytes, filename: str, content_type: str) -> str:
         r = await http.post(
             "https://api.sarvam.ai/speech-to-text",
             headers={"api-subscription-key": SARVAM_KEY},
-            files={"file": (filename, audio, content_type)},
+            files={"file": (filename, audio, content_type.split(";")[0])},
             data={"model": "saarika:v2.5", "language_code": "unknown"},
         )
     if r.status_code != 200:
