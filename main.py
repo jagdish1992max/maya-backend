@@ -10,8 +10,7 @@ SARVAM_KEY = os.environ["SARVAM_API_KEY"]
 GEMINI_KEY = os.environ["GEMINI_API_KEY"]
 # Model ka naam AI Studio mein check kar lena, ye naam badalte rehte hain
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest")
-SPEAKER = os.getenv("TTS_SPEAKER", "anushka")
-
+SPEAKER = os.getenv("TTS_SPEAKER", "ishita")
 SYSTEM_PROMPT = """Tum MAYA ho, ek friendly aur thodi masti-bhari AI dost.
 - Hinglish mein baat karo (Hindi + English mix, Roman script mein).
 - Jawab chhote rakho: 1-3 vakya. Ye voice call hai, essay nahi.
@@ -71,7 +70,7 @@ async def text_to_speech(text: str) -> str:
                 "text": text,
                 "target_language_code": "hi-IN",
                 "speaker": SPEAKER,
-                "model": "bulbul:v2",
+                "model": "bulbul:v3",
             },
         )
     if r.status_code != 200:
