@@ -33,6 +33,7 @@ MAX_TURNS = 20
 
 
 async def speech_to_text(audio: bytes, filename: str, content_type: str) -> str:
+    start_time = time.perf_counter()
     async with httpx.AsyncClient(timeout=60) as http:
         r = await http.post(
             "https://api.sarvam.ai/speech-to-text",
@@ -42,6 +43,7 @@ async def speech_to_text(audio: bytes, filename: str, content_type: str) -> str:
         )
     if r.status_code != 200:
         raise HTTPException(502, f"STT error: {r.text}")
+        print(f"[TIMING] Sarvam STT: {time.perf_counter() - start_time:.2f}s")
     return r.json().get("transcript", "").strip()
 
 
@@ -52,17 +54,20 @@ async def ask_gemini(history: list[dict]) -> str:
         "contents": history[-MAX_TURNS:],
         "generationConfig": {"maxOutputTokens": 600},
     }
+    start_time = time.perf_counter()
     async with httpx.AsyncClient(timeout=60) as http:
         r = await http.post(url, headers={"x-goog-api-key": GEMINI_KEY}, json=body)
     if r.status_code != 200:
         raise HTTPException(502, f"LLM error: {r.text}")
     try:
+        print(f"[TIMING] Gemini: {time.perf_counter() - start_time:.2f}s")
         return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
     except (KeyError, IndexError):
         raise HTTPException(502, f"LLM empty reply: {r.text}")
 
 
 async def text_to_speech(text: str) -> str:
+    start_time = time.perf_counter()
     async with httpx.AsyncClient(timeout=60) as http:
         r = await http.post(
             "https://api.sarvam.ai/text-to-speech",
@@ -76,6 +81,7 @@ async def text_to_speech(text: str) -> str:
         )
     if r.status_code != 200:
         raise HTTPException(502, f"TTS error: {r.text}")
+        print(f"[TIMING] Sarvam TTS: {time.perf_counter() - start_time:.2f}s")
     return r.json()["audios"][0]
 
 
