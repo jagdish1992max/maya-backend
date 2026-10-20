@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAYA - Voice Chat</title>
+<style>
+  body { font-family: system-ui, sans-serif; background:#111; color:#eee; margin:0;
+         display:flex; flex-direction:column; height:100vh; }
+  #chat { flex:1; overflow-y:auto; padding:16px; }
+  .msg { max-width:80%; padding:10px 14px; border-radius:14px; margin:8px 0; line-height:1.4; }
+  .user { background:#2d5be3; margin-left:auto; }
+  .maya { background:#2a2a2a; }
+  #bar { padding:16px; text-align:center; border-top:1px solid #333; }
+  #mic { width:80px; height:80px; border-radius:50%; border:none; font-size:32px;
+         background:#e33d6f; color:#fff; cursor:pointer; }
+  #mic.rec { background:#e3a02d; animation:pulse 1s infinite; }
+  #status { margin-top:8px; font-size:14px; color:#aaa; min-height:18px; }
+  @keyframes pulse { 50% { transform:scale(1.08); } }
+</style>
+</head>
+<body>
+<div id="chat"></div>
+<div id="bar">
+  <button id="mic">🎤</button>
+  <div id="status">Mic dabao aur bolo</div>
+</div>
+
+<script>
+// Deploy ke baad ise apne backend ka URL bana dena
+const BACKEND_URL = "http://localhost:8000";
+const sessionId = crypto.randomUUID();
+
+const chat = document.getElementById("chat");
+const mic = document.getElementById("mic");
+const statusEl = document.getElementById("status");
+
+let recorder, chunks = [], recording = false, busy = false;
+
+function addMsg(text, who) {
+  const d = document.createElement("div");
+  d.className = "msg " + who;
+  d.textContent = text;
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+mic.onclick = async () => {
+  if (busy) return;
+  if (!recording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recorder = new MediaRecorder(stream);
+      chunks = [];
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        send(new Blob(chunks, { type: recorder.mimeType }));
+      };
+      recorder.start();
+      recording = true;
+      mic.classList.add("rec");
+      statusEl.textContent = "Sun rahi hoon... bol do, phir dobara dabao";
+    } catch (e) {
+      statusEl.textContent = "Mic permission nahi mili";
+    }
+  } else {
+    recorder.stop();
+    recording = false;
+    mic.classList.remove("rec");
+  }
+};
+
+async function send(blob) {
+  busy = true;
+  statusEl.textContent = "Soch rahi hoon...";
+  const form = new FormData();
+  form.append("audio", blob, "audio.webm");
+  form.append("session_id", sessionId);
+  try {
+    const res = await fetch(BACKEND_URL + "/chat", { method: "POST", body: form });
+    if (!res.ok) throw new Error((await res.json()).detail || "Error");
+    const data = await res.json();
+    addMsg(data.user_text, "user");
+    addMsg(data.reply_text, "maya");
+    statusEl.textContent = "Bol rahi hoon...";
+    const audio = new Audio("data:audio/wav;base64," + data.audio_base64);
+    audio.onended = () => { statusEl.textContent = "Mic dabao aur bolo"; busy = false; };
+    await audio.play();
+  } catch (e) {
+    statusEl.textContent = "Error: " + e.message;
+    busy = false;
+  }
+}
+</script>
+</body>
+</html>
